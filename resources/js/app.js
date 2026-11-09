@@ -455,29 +455,43 @@
     var state = camera.status === "告警" ? "alarm" : camera.status === "离线" ? "offline" : "online";
     var playable = camera.status !== "离线";
     var wrap = document.createElement("div"); wrap.className = "modal-wrap camera-modal-wrap";
-    wrap.innerHTML = '<section class="modal camera-modal" role="dialog" aria-modal="true" aria-label="' + camera.name + '实时视频"><button class="close" aria-label="关闭视频窗口">×</button><header><span>LIVE CAMERA / 实时监控</span><h2>' + camera.name + '</h2><small>' + camera.id + ' · ' + camera.area + '</small></header><main><div class="camera-player"><div class="camera-feed scene-' + camera.scene + ' ' + state + (playable ? ' is-playing' : '') + '" tabindex="0"><div class="feed-grid"></div><div class="feed-room"><i></i><i></i><i></i><i></i></div><div class="feed-conveyor"><i></i><i></i><i></i><i></i><i></i></div><div class="feed-person p1"></div><div class="feed-person p2"></div><div class="detect-box">PERSON 98%</div><div class="feed-scan"></div><div class="feed-status"><b>● ' + (playable ? 'LIVE' : 'OFFLINE') + '</b><span>' + new Date().toLocaleDateString("zh-CN") + ' <em id="feed-clock"></em></span></div><div class="feed-paused"><i>▶</i><span>画面已暂停</span></div>' + (!playable ? '<div class="signal-lost">SIGNAL LOST<small>设备已离线，暂时无法播放视频</small></div>' : '') + '</div><div class="video-controls"><button class="video-play"' + (!playable ? ' disabled' : '') + ' aria-label="暂停视频"><i>Ⅱ</i><span>暂停</span></button><div class="live-progress"><i></i><b>实时</b></div><button class="video-sound"' + (!playable ? ' disabled' : '') + ' aria-label="关闭声音">◉<span>声音</span></button><button class="video-fullscreen"' + (!playable ? ' disabled' : '') + ' aria-label="全屏播放">⛶<span>全屏</span></button></div></div><div class="detail camera-detail"><h3>设备信息</h3><p><i>设备编号</i>' + camera.id + '</p><p><i>安装位置</i>' + camera.area + '</p><p><i>运行状态</i><b class="camera-state ' + state + '">' + camera.status + '</b></p><p><i>当前人数</i>' + camera.people + ' 人</p><p><i>视频参数</i>1080P · 25FPS</p><h3>AI 实时研判</h3><article>' + camera.note + '。画面已接入行为识别、人员检测与区域入侵分析。</article></div></main><footer><span>最近巡检：2分钟前 · 视频流延迟 0.8s</span><button class="complete camera-switch"' + (!playable ? ' disabled' : '') + '>切换高清画面</button></footer></section>';
+    wrap.innerHTML = '<section class="modal camera-modal" role="dialog" aria-modal="true" aria-label="' + camera.name + '实时视频"><button class="close" aria-label="关闭视频窗口">×</button><header><span>LIVE CAMERA / 实时监控</span><h2>' + camera.name + '</h2><small>' + camera.id + ' · ' + camera.area + '</small></header><main><div class="camera-player"><div class="camera-feed real-video ' + state + (playable ? ' is-playing' : '') + '" tabindex="0">' + (playable ? '<video class="monitor-video" autoplay muted loop playsinline preload="auto"><source src="files/video/factory-monitor.mp4" type="video/mp4">当前浏览器不支持视频播放</video>' : '<div class="offline-video-bg"></div>') + '<div class="feed-scan"></div><div class="feed-status"><b>● ' + (playable ? 'LIVE' : 'OFFLINE') + '</b><span>' + new Date().toLocaleDateString("zh-CN") + ' <em id="feed-clock"></em></span></div><div class="camera-ai-box"><span>AI 监测中</span></div><div class="feed-paused"><i>▶</i><span>画面已暂停</span></div>' + (!playable ? '<div class="signal-lost">SIGNAL LOST<small>设备已离线，暂时无法播放视频</small></div>' : '') + '</div><div class="video-controls"><button class="video-play"' + (!playable ? ' disabled' : '') + ' aria-label="暂停视频"><i>Ⅱ</i><span>暂停</span></button><div class="live-progress"><i></i><b>实时</b></div><button class="video-sound muted"' + (!playable ? ' disabled' : '') + ' aria-label="打开声音">⊘<span>静音</span></button><button class="video-fullscreen"' + (!playable ? ' disabled' : '') + ' aria-label="全屏播放">⛶<span>全屏</span></button></div></div><div class="detail camera-detail"><h3>设备信息</h3><p><i>设备编号</i>' + camera.id + '</p><p><i>安装位置</i>' + camera.area + '</p><p><i>运行状态</i><b class="camera-state ' + state + '">' + camera.status + '</b></p><p><i>当前人数</i>' + camera.people + ' 人</p><p><i>视频参数</i>1080P · 25FPS</p><h3>AI 实时研判</h3><article>' + camera.note + '。画面已接入行为识别、人员检测与区域入侵分析。</article></div></main><footer><span>最近巡检：2分钟前 · 视频流延迟 0.8s</span><button class="complete camera-switch"' + (!playable ? ' disabled' : '') + '>切换高清画面</button></footer></section>';
     document.body.appendChild(wrap);
     var tick = function () { var el = qs("#feed-clock", wrap); if (el) el.textContent = new Date().toLocaleTimeString("zh-CN", {hour12:false}); };
     tick(); var timer = setInterval(tick, 1000);
     var feed = qs(".camera-feed", wrap);
-    var closeModal = function () { clearInterval(timer); document.removeEventListener("keydown", onKeydown); wrap.remove(); };
-    var togglePlayback = function () {
-      if (!playable) return;
-      var playing = feed.classList.toggle("is-playing");
+    var video = qs(".monitor-video", wrap);
+    var updatePlayButton = function () {
+      if (!video) return;
+      var playing = !video.paused;
+      feed.classList.toggle("is-playing", playing);
       var button = qs(".video-play", wrap);
       button.innerHTML = playing ? '<i>Ⅱ</i><span>暂停</span>' : '<i>▶</i><span>播放</span>';
       button.setAttribute("aria-label", playing ? "暂停视频" : "播放视频");
+    };
+    var closeModal = function () { clearInterval(timer); if (video) video.pause(); document.removeEventListener("keydown", onKeydown); wrap.remove(); };
+    var togglePlayback = function () {
+      if (!video) return;
+      if (video.paused) video.play().then(updatePlayButton).catch(function () { toast("浏览器阻止了自动播放，请再次点击播放"); });
+      else { video.pause(); updatePlayButton(); }
     };
     var onKeydown = function (e) { if (e.key === "Escape") closeModal(); if (e.key === " " && document.activeElement === feed) { e.preventDefault(); togglePlayback(); } };
     document.addEventListener("keydown", onKeydown);
     wrap.addEventListener("click", function (e) { if (e.target === wrap || e.target.closest(".close")) closeModal(); });
     qs(".video-play", wrap).onclick = togglePlayback;
+    if (video) {
+      video.addEventListener("play", updatePlayButton);
+      video.addEventListener("pause", updatePlayButton);
+      video.play().then(updatePlayButton).catch(function () { updatePlayButton(); });
+    }
     feed.ondblclick = function () { if (playable) qs(".video-fullscreen", wrap).click(); };
     qs(".video-sound", wrap).onclick = function () {
-      var muted = this.classList.toggle("muted");
-      this.innerHTML = muted ? '⊘<span>静音</span>' : '◉<span>声音</span>';
-      this.setAttribute("aria-label", muted ? "打开声音" : "关闭声音");
-      toast(camera.id + (muted ? " 已静音" : " 已恢复声音"));
+      if (!video) return;
+      video.muted = !video.muted;
+      this.classList.toggle("muted", video.muted);
+      this.innerHTML = video.muted ? '⊘<span>静音</span>' : '◉<span>声音</span>';
+      this.setAttribute("aria-label", video.muted ? "打开声音" : "关闭声音");
+      toast(camera.id + (video.muted ? " 已静音" : " 已恢复声音"));
     };
     qs(".video-fullscreen", wrap).onclick = function () {
       var player = qs(".camera-player", wrap);
