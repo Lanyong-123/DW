@@ -85,10 +85,10 @@
     var positions = ["0% center", "50% center", "100% center"];
     var cards = data.cameras.map(function (camera, index) {
       var state = camera.status === "告警" ? "alarm" : camera.status === "离线" ? "offline" : "online";
-      return '<button class="camera-tile ' + state + '" data-camera="' + camera.id + '" aria-label="查看' + camera.name + '视频信息"><div class="camera-thumb" style="background-position:' + positions[index % 3] + '"><span>● ' + (camera.status === "离线" ? "OFFLINE" : "LIVE") + '</span><i></i><em>▶</em></div><footer><span><b>' + camera.name + '</b><small>' + camera.id + '</small></span><i>' + camera.status + '</i></footer></button>';
+      return '<button class="camera-tile ' + state + '" data-camera="' + camera.id + '" aria-label="播放' + camera.name + '实时视频"><div class="camera-thumb" style="background-position:' + positions[index % 3] + '"><span>● ' + (camera.status === "离线" ? "OFFLINE" : "LIVE") + '</span><i></i><em>▶</em></div><footer><span><b>' + camera.name + '</b><small>' + camera.id + '</small></span><i>' + camera.status + '</i></footer></button>';
     }).join("");
     var title = floor ? floorName(floor) + "摄像头快速预览" : "整栋重点摄像头预览";
-    return '<section class="camera-strip"><header><span><i></i> ' + title + '</span><em>点击卡片查看视频信息</em></header><div class="camera-grid">' + cards + '</div></section>';
+    return '<section class="camera-strip"><header><span><i></i> ' + title + '</span><em>点击卡片播放实时视频</em></header><div class="camera-grid">' + cards + '</div></section>';
   }
   function factoryPlanHtml() {
     return '<div class="factory-plan-sim"><div class="plan-axis axis-x">A　B　C　D　E　F　G　H　J</div><div class="plan-axis axis-y">1<br>2<br>3<br>4<br>5<br>6</div><div class="plan-room room-life"><b>生活辅助区</b><span>男卫</span><span>女卫</span><span>楼梯间</span><span>更衣室</span></div><div class="plan-room room-production"><b>生产作业区</b><div class="machine-lines"><i></i><i></i><i></i><i></i><i></i></div><small>1号机组</small><small>2号机组</small><small>冲压区</small></div><div class="plan-room room-material"><b>原料暂存区</b><i></i><i></i><i></i><i></i></div><div class="plan-room room-pack"><b>包装发货区</b><span>检验</span><span>包装</span><span>装卸口</span></div><div class="main-passage">主 通 道</div><div class="north-mark">N<br>↑</div></div>';
@@ -453,12 +453,38 @@
   function showCamera(id) {
     var camera = data.cameras.filter(function (item) { return item.id === id; })[0]; if (!camera) return;
     var state = camera.status === "告警" ? "alarm" : camera.status === "离线" ? "offline" : "online";
+    var playable = camera.status !== "离线";
     var wrap = document.createElement("div"); wrap.className = "modal-wrap camera-modal-wrap";
-    wrap.innerHTML = '<section class="modal camera-modal"><button class="close">×</button><header><span>LIVE CAMERA / 实时监控</span><h2>' + camera.name + '</h2><small>' + camera.id + ' · ' + camera.area + '</small></header><main><div class="camera-feed scene-' + camera.scene + ' ' + state + '"><div class="feed-grid"></div><div class="feed-room"><i></i><i></i><i></i><i></i></div><div class="feed-person p1"></div><div class="feed-person p2"></div><div class="detect-box">PERSON 98%</div><div class="feed-status"><b>● REC</b><span>2026-09-14 <em id="feed-clock"></em></span></div>' + (camera.status === "离线" ? '<div class="signal-lost">SIGNAL LOST<small>正在尝试重新连接设备</small></div>' : '') + '</div><div class="detail camera-detail"><h3>设备信息</h3><p><i>设备编号</i>' + camera.id + '</p><p><i>运行状态</i><b class="camera-state ' + state + '">' + camera.status + '</b></p><p><i>当前人数</i>' + camera.people + ' 人</p><p><i>视频参数</i>1080P · 25FPS</p><h3>AI 实时研判</h3><article>' + camera.note + '。画面已接入行为识别、人员检测与区域入侵分析。</article></div></main><footer><span>最近巡检：2分钟前</span><button class="complete camera-switch">切换高清画面</button></footer></section>';
+    wrap.innerHTML = '<section class="modal camera-modal" role="dialog" aria-modal="true" aria-label="' + camera.name + '实时视频"><button class="close" aria-label="关闭视频窗口">×</button><header><span>LIVE CAMERA / 实时监控</span><h2>' + camera.name + '</h2><small>' + camera.id + ' · ' + camera.area + '</small></header><main><div class="camera-player"><div class="camera-feed scene-' + camera.scene + ' ' + state + (playable ? ' is-playing' : '') + '" tabindex="0"><div class="feed-grid"></div><div class="feed-room"><i></i><i></i><i></i><i></i></div><div class="feed-conveyor"><i></i><i></i><i></i><i></i><i></i></div><div class="feed-person p1"></div><div class="feed-person p2"></div><div class="detect-box">PERSON 98%</div><div class="feed-scan"></div><div class="feed-status"><b>● ' + (playable ? 'LIVE' : 'OFFLINE') + '</b><span>' + new Date().toLocaleDateString("zh-CN") + ' <em id="feed-clock"></em></span></div><div class="feed-paused"><i>▶</i><span>画面已暂停</span></div>' + (!playable ? '<div class="signal-lost">SIGNAL LOST<small>设备已离线，暂时无法播放视频</small></div>' : '') + '</div><div class="video-controls"><button class="video-play"' + (!playable ? ' disabled' : '') + ' aria-label="暂停视频"><i>Ⅱ</i><span>暂停</span></button><div class="live-progress"><i></i><b>实时</b></div><button class="video-sound"' + (!playable ? ' disabled' : '') + ' aria-label="关闭声音">◉<span>声音</span></button><button class="video-fullscreen"' + (!playable ? ' disabled' : '') + ' aria-label="全屏播放">⛶<span>全屏</span></button></div></div><div class="detail camera-detail"><h3>设备信息</h3><p><i>设备编号</i>' + camera.id + '</p><p><i>安装位置</i>' + camera.area + '</p><p><i>运行状态</i><b class="camera-state ' + state + '">' + camera.status + '</b></p><p><i>当前人数</i>' + camera.people + ' 人</p><p><i>视频参数</i>1080P · 25FPS</p><h3>AI 实时研判</h3><article>' + camera.note + '。画面已接入行为识别、人员检测与区域入侵分析。</article></div></main><footer><span>最近巡检：2分钟前 · 视频流延迟 0.8s</span><button class="complete camera-switch"' + (!playable ? ' disabled' : '') + '>切换高清画面</button></footer></section>';
     document.body.appendChild(wrap);
     var tick = function () { var el = qs("#feed-clock", wrap); if (el) el.textContent = new Date().toLocaleTimeString("zh-CN", {hour12:false}); };
     tick(); var timer = setInterval(tick, 1000);
-    wrap.addEventListener("click", function (e) { if (e.target === wrap || e.target.classList.contains("close")) { clearInterval(timer); wrap.remove(); } });
+    var feed = qs(".camera-feed", wrap);
+    var closeModal = function () { clearInterval(timer); document.removeEventListener("keydown", onKeydown); wrap.remove(); };
+    var togglePlayback = function () {
+      if (!playable) return;
+      var playing = feed.classList.toggle("is-playing");
+      var button = qs(".video-play", wrap);
+      button.innerHTML = playing ? '<i>Ⅱ</i><span>暂停</span>' : '<i>▶</i><span>播放</span>';
+      button.setAttribute("aria-label", playing ? "暂停视频" : "播放视频");
+    };
+    var onKeydown = function (e) { if (e.key === "Escape") closeModal(); if (e.key === " " && document.activeElement === feed) { e.preventDefault(); togglePlayback(); } };
+    document.addEventListener("keydown", onKeydown);
+    wrap.addEventListener("click", function (e) { if (e.target === wrap || e.target.closest(".close")) closeModal(); });
+    qs(".video-play", wrap).onclick = togglePlayback;
+    feed.ondblclick = function () { if (playable) qs(".video-fullscreen", wrap).click(); };
+    qs(".video-sound", wrap).onclick = function () {
+      var muted = this.classList.toggle("muted");
+      this.innerHTML = muted ? '⊘<span>静音</span>' : '◉<span>声音</span>';
+      this.setAttribute("aria-label", muted ? "打开声音" : "关闭声音");
+      toast(camera.id + (muted ? " 已静音" : " 已恢复声音"));
+    };
+    qs(".video-fullscreen", wrap).onclick = function () {
+      var player = qs(".camera-player", wrap);
+      if (document.fullscreenElement) { if (document.exitFullscreen) document.exitFullscreen(); }
+      else if (player.requestFullscreen) player.requestFullscreen();
+      else toast("当前浏览器不支持全屏播放");
+    };
     qs(".camera-switch", wrap).onclick = function () { toast(camera.id + " 已切换为高清码流"); };
   }
   function showAlarmShot(index) {
